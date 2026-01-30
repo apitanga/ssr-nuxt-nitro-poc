@@ -47,7 +47,8 @@ A hands-on sandbox for exploring "cutting edge" serverless SSR architecture. The
 | DNS | Route53 | Health checks + failover routing |
 | Data | DynamoDB Global Tables | Active-active, serverless, scales to zero |
 | Storage | S3 + CRR | Static assets replicated across regions |
-| IaC | Terraform | Consistent with existing patterns |
+| IaC | Terraform | Consistent with existing patterns, portable across accounts |
+| CI/CD | GitHub Actions | Native integration, OIDC support |
 | Weather API | Open-Meteo or similar | Free, no key required for PoC |
 
 ---
@@ -228,12 +229,16 @@ SESSION#<id>        METADATA           ip: string, region: string,
 1. ✅ Architecture decided (Option A)
 2. ✅ App functionality defined (Server Clock + Weather)
 3. ✅ Data layer chosen (DynamoDB Global Tables)
-4. 🔄 Scaffold Terraform project structure
-5. 🔄 Create minimal Nuxt 3 app with Nitro Lambda preset
-6. 🔄 Deploy single region (us-east-1) first
-7. 🔄 Add DR region (us-west-2) and Global Tables
-8. 🔄 Configure CloudFront origin failover
-9. 🔄 Test failover behavior
+4. ✅ Terraform project structure with CI/CD user
+5. ✅ Nuxt 3 app with Nitro Lambda preset
+6. ✅ GitHub Actions CI/CD workflows
+7. 🔄 Deploy infrastructure (includes CI/CD user creation)
+8. 🔄 Retrieve CI/CD credentials from Secrets Manager
+9. 🔄 Configure GitHub secrets
+10. 🔄 Deploy single region (us-east-1) first
+11. 🔄 Add DR region (us-west-2) and Global Tables
+12. 🔄 Configure CloudFront origin failover
+13. 🔄 Test failover behavior
 10. 🔄 Document findings
 
 ---
