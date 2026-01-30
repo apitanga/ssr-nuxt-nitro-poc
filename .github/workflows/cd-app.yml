@@ -1,0 +1,120 @@
+# CD Workflow - Deploy Application
+name: CD - Deploy App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/cd-app.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+concurrency:
+  group: deploy-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build for Lambda
+        working-directory: app
+        run: NITRO_PRESET=aws-lambda npm run build
+
+      - name: Create deployment package
+        working-directory: app
+        run: |
+          cd .output/server
+          zip -r ../../lambda-deploy.zip .
+          cd ../..
+          ls -lh lambda-deploy.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload to S3 (Primary - us-east-1)
+        working-directory: app
+        run: |
+          aws s3 cp lambda-deploy.zip \
+            s3://ssr-poc-lambda-deployments-${{ secrets.AWS_ACCOUNT_ID }}-us-east-1/lambda/nitro-ssr.zip
+
+      - name: Upload to S3 (DR - us-west-2)
+        working-directory: app
+        run: |
+          aws s3 cp lambda-deploy.zip \
+            s3://ssr-poc-lambda-deployments-${{ secrets.AWS_ACCOUNT_ID }}-us-west-2/lambda/nitro-ssr.zip \
+            --region us-west-2
+
+      - name: Update Lambda function (Primary)
+        run: |
+          aws lambda update-function-code \
+            --function-name ssr-poc-primary \
+            --s3-bucket ssr-poc-lambda-deployments-${{ secrets.AWS_ACCOUNT_ID }}-us-east-1 \
+            --s3-key lambda/nitro-ssr.zip \
+            --publish
+
+      - name: Update Lambda function (DR)
+        run: |
+          aws lambda update-function-code \
+            --function-name ssr-poc-dr \
+            --s3-bucket ssr-poc-lambda-deployments-${{ secrets.AWS_ACCOUNT_ID }}-us-west-2 \
+            --s3-key lambda/nitro-ssr.zip \
+            --region us-west-2 \
+            --publish
+
+      - name: Wait for update (Primary)
+        run: |
+          aws lambda wait function-updated-v2 \
+            --function-name ssr-poc-primary
+
+      - name: Wait for update (DR)
+        run: |
+          aws lambda wait function-updated-v2 \
+            --function-name ssr-poc-dr \
+            --region us-west-2
+
+      - name: Smoke test
+        run: |
+          echo "Waiting for propagation..."
+          sleep 10
+          PRIMARY_URL=$(aws lambda get-function-url-config \
+            --function-name ssr-poc-primary \
+            --query 'FunctionUrl' --output text)
+          echo "Testing primary: $PRIMARY_URL"
+          curl -sf "$PRIMARY_URL/api/health" || exit 1
+          echo "✅ Deployment successful!"
+
+      - name: Notify
+        if: always()
+        run: |
+          echo "::notice::Deployment to ${{ github.event.inputs.environment || 'dev' }} completed!"

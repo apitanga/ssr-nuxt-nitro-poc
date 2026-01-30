@@ -1,0 +1,95 @@
+# CD Workflow - Deploy Infrastructure
+name: CD - Deploy Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/cd-infra.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_WORKSPACE: default
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action || 'plan/apply' }}
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        if: github.event.inputs.action != 'destroy'
+        run: terraform plan -out=tfplan -input=false
+        env:
+          TF_VAR_environment: dev
+
+      - name: Upload Plan
+        if: github.event.inputs.action != 'destroy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/tfplan
+          retention-days: 5
+
+      - name: Terraform Apply (Auto on main)
+        if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'destroy' && github.event.inputs.action != 'plan'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Terraform Apply (Manual)
+        if: github.event.inputs.action == 'apply' && github.ref != 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
+        env:
+          TF_VAR_environment: dev
+
+      - name: Output Results
+        if: github.event.inputs.action != 'destroy'
+        run: terraform output -json
