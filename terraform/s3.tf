@@ -92,13 +92,17 @@ resource "aws_s3_bucket_replication_configuration" "static_assets" {
       bucket = aws_s3_bucket.static_assets_dr.arn
       
       replication_time {
-        status  = "Enabled"
-        minutes = 15
+        status = "Enabled"
+        time {
+          minutes = 15
+        }
       }
       
       metrics {
-        status  = "Enabled"
-        minutes = 15
+        status = "Enabled"
+        event_threshold {
+          minutes = 15
+        }
       }
     }
   }

@@ -1,9 +1,18 @@
 # Lambda Module - Reusable Lambda function with Function URL
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
   description   = var.description
-  role          = var.role_arn != "" ? var.role_arn : aws_iam_role.lambda.arn
+  role          = var.role_arn != "" ? var.role_arn : aws_iam_role.lambda[0].arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   memory_size   = var.memory_size

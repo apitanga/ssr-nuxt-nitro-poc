@@ -1,14 +1,19 @@
 # Route53 DNS and Health Checks
+# Note: For dev environment, you can skip Route53 and use CloudFront domain directly
+# For prod, ensure the Route53 zone exists or create one
 
-# Route53 Zone (data source - assuming zone exists)
+# Route53 Zone (data source - only if zone exists)
+# Uncomment this when you have a Route53 zone for your domain
 data "aws_route53_zone" "main" {
+  count        = var.environment == "prod" ? 1 : 0
   provider     = aws.primary
   name         = var.domain_name
   private_zone = false
 }
 
-# Health Check for Primary Region
+# Health Check for Primary Region (only in prod)
 resource "aws_route53_health_check" "primary" {
+  count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
   
   fqdn              = replace(aws_lambda_function_url.primary.function_url, "https://", "")
@@ -25,8 +30,9 @@ resource "aws_route53_health_check" "primary" {
   })
 }
 
-# Health Check for DR Region
+# Health Check for DR Region (only in prod)
 resource "aws_route53_health_check" "dr" {
+  count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
   
   fqdn              = replace(aws_lambda_function_url.dr.function_url, "https://", "")
@@ -43,10 +49,11 @@ resource "aws_route53_health_check" "dr" {
   })
 }
 
-# DNS Record for Primary (Failover)
+# DNS Record for Primary (Failover) - only if zone exists
 resource "aws_route53_record" "primary" {
+  count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
-  zone_id  = data.aws_route53_zone.main.zone_id
+  zone_id  = data.aws_route53_zone.main[0].zone_id
   name     = local.domains.primary
   type     = "A"
 
@@ -60,14 +67,15 @@ resource "aws_route53_record" "primary" {
     evaluate_target_health = true
   }
 
-  health_check_id = aws_route53_health_check.primary.id
+  health_check_id = aws_route53_health_check.primary[0].id
   set_identifier  = "primary"
 }
 
-# DNS Record for DR (Failover)
+# DNS Record for DR (Failover) - only if zone exists
 resource "aws_route53_record" "dr" {
+  count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
-  zone_id  = data.aws_route53_zone.main.zone_id
+  zone_id  = data.aws_route53_zone.main[0].zone_id
   name     = local.domains.primary
   type     = "A"
 
@@ -81,7 +89,7 @@ resource "aws_route53_record" "dr" {
     evaluate_target_health = true
   }
 
-  health_check_id = aws_route53_health_check.dr.id
+  health_check_id = aws_route53_health_check.dr[0].id
   set_identifier  = "dr"
 }
 
@@ -99,7 +107,7 @@ resource "aws_acm_certificate" "main" {
   }
 }
 
-# Certificate Validation
+# Certificate Validation - only in prod with Route53 zone
 resource "aws_route53_record" "cert_validation" {
   provider = aws.primary
   for_each = var.environment == "prod" ? {
@@ -115,7 +123,7 @@ resource "aws_route53_record" "cert_validation" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = data.aws_route53_zone.main.zone_id
+  zone_id         = data.aws_route53_zone.main[0].zone_id
 }
 
 resource "aws_acm_certificate_validation" "main" {

@@ -26,18 +26,5 @@ output "application_url" {
   value       = "https://${var.subdomain}.${var.domain_name}"
 }
 
-# CI/CD Outputs
-output "cicd_user_name" {
-  description = "Name of the CI/CD IAM user"
-  value       = aws_iam_user.cicd.name
-}
-
-output "cicd_user_arn" {
-  description = "ARN of the CI/CD IAM user"
-  value       = aws_iam_user.cicd.arn
-}
-
-output "cicd_credentials_secret" {
-  description = "AWS Secrets Manager ARN containing CI/CD credentials"
-  value       = aws_secretsmanager_secret.cicd_credentials.arn
-}
+# Note: CI/CD outputs (cicd_user_name, cicd_user_arn, cicd_credentials_secret)
+# are defined in iam-cicd.tf to keep related resources together
