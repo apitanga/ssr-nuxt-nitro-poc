@@ -48,6 +48,7 @@ A hands-on sandbox for exploring "cutting edge" serverless SSR architecture. The
 | Data | DynamoDB Global Tables | Active-active, serverless, scales to zero |
 | Storage | S3 + CRR | Static assets replicated across regions |
 | IaC | Terraform | Consistent with existing patterns, portable across accounts |
+| Terraform Backend | Terraform Cloud | Remote state, locking, team collaboration |
 | CI/CD | GitHub Actions | Native integration, OIDC support |
 | Weather API | Open-Meteo or similar | Free, no key required for PoC |
 

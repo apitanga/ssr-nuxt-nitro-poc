@@ -1,8 +1,17 @@
 # SSR Nuxt/Nitro PoC - Main Terraform Configuration
 # Multi-region serverless SSR with CloudFront failover
+# Terraform Cloud backend for remote state and execution
 
 terraform {
   required_version = ">= 1.5.0"
+
+  cloud {
+    organization = "Pitangaville"
+    
+    workspaces {
+      name = "ssr-nuxt-nitro-poc"
+    }
+  }
   
   required_providers {
     aws = {
@@ -10,14 +19,6 @@ terraform {
       version = "~> 5.0"
       configuration_aliases = [aws.primary, aws.dr]
     }
-  }
-
-  backend "s3" {
-    bucket         = "terraform-state-ssr-poc"
-    key            = "infrastructure/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-locks-ssr-poc"
   }
 }
 
