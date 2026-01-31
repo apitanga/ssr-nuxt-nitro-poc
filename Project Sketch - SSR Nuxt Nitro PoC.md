@@ -88,7 +88,7 @@ A hands-on sandbox for exploring "cutting edge" serverless SSR architecture. The
         ▼                               ▼
 ┌───────────────┐               ┌───────────────┐
 │  S3 Static    │◄─────────────►│  S3 Static    │
-│   (CRR)       │   (replication)│   (CRR)       │
+│   (CRR)       │ (replication) │   (CRR)       │
 └───────────────┘               └───────────────┘
         │                               │
         └────────────┬──────────────────┘

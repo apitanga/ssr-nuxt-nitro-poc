@@ -106,6 +106,11 @@ resource "aws_s3_bucket_replication_configuration" "static_assets" {
       }
     }
   }
+  
+  depends_on = [
+    aws_s3_bucket_versioning.static_assets,
+    aws_s3_bucket_versioning.static_assets_dr
+  ]
 }
 
 # DR region - Static assets bucket
