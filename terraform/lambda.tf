@@ -117,7 +117,7 @@ resource "aws_lambda_function_url" "primary" {
   cors {
     allow_credentials = true
     allow_origins     = ["*"]
-    allow_methods     = ["GET", "POST", "OPTIONS"]
+    allow_methods     = ["*"]
     allow_headers     = ["*"]
     max_age          = 86400
   }
@@ -132,7 +132,7 @@ resource "aws_lambda_function_url" "dr" {
   cors {
     allow_credentials = true
     allow_origins     = ["*"]
-    allow_methods     = ["GET", "POST", "OPTIONS"]
+    allow_methods     = ["*"]
     allow_headers     = ["*"]
     max_age          = 86400
   }
