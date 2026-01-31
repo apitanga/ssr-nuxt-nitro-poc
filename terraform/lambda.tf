@@ -127,12 +127,11 @@ resource "aws_lambda_function_url" "primary" {
 
 # Allow public invocation via Function URL - Primary
 resource "aws_lambda_permission" "allow_function_url_primary" {
-  provider               = aws.primary
-  statement_id           = "AllowFunctionURLInvoke"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = module.lambda_primary.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
+  provider      = aws.primary
+  statement_id  = "AllowFunctionURLInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_primary.function_name
+  principal     = "*"
 }
 
 # Lambda Function URL for DR region
@@ -152,10 +151,9 @@ resource "aws_lambda_function_url" "dr" {
 
 # Allow public invocation via Function URL - DR
 resource "aws_lambda_permission" "allow_function_url_dr" {
-  provider               = aws.dr
-  statement_id           = "AllowFunctionURLInvoke"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = module.lambda_dr.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
+  provider      = aws.dr
+  statement_id  = "AllowFunctionURLInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_dr.function_name
+  principal     = "*"
 }
