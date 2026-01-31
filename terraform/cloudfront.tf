@@ -27,7 +27,7 @@ resource "aws_cloudfront_distribution" "main" {
 
   # Primary Origin (us-east-1 Lambda Function URL)
   origin {
-    domain_name = replace(aws_lambda_function_url.primary.function_url, "/https://", "")
+    domain_name = regex("https://([^/]+)/?", aws_lambda_function_url.primary.function_url)[0]
     origin_id   = "primary-lambda"
     
     custom_origin_config {
@@ -45,7 +45,7 @@ resource "aws_cloudfront_distribution" "main" {
 
   # DR Origin (us-west-2 Lambda Function URL)
   origin {
-    domain_name = replace(aws_lambda_function_url.dr.function_url, "/https://", "")
+    domain_name = regex("https://([^/]+)/?", aws_lambda_function_url.dr.function_url)[0]
     origin_id   = "dr-lambda"
     
     custom_origin_config {
