@@ -1,23 +1,37 @@
 # CD Workflow - Deploy Infrastructure
+# 
+# ⚠️  HYBRID MODE: Infrastructure managed locally via Terraform Cloud
+# This workflow is DISABLED by default. Infrastructure changes should be made
+# locally using Terraform Cloud (Pitangaville organization).
+#
+# To enable this workflow (requires AWS secrets):
+# 1. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_ACCOUNT_ID in GitHub secrets
+# 2. Uncomment the 'on:' section below
+# 3. Comment out the 'on: workflow_dispatch: {}' line
+
 name: CD - Deploy Infrastructure
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'terraform/**'
-      - '.github/workflows/cd-infra.yml'
-  workflow_dispatch:
-    inputs:
-      action:
-        description: 'Terraform action'
-        required: true
-        default: 'plan'
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
+# Disabled - managed locally via Terraform Cloud
+on: workflow_dispatch: {}
+
+# Uncomment below to enable GitHub Actions for infrastructure
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'terraform/**'
+#       - '.github/workflows/cd-infra.yml'
+#   workflow_dispatch:
+#     inputs:
+#       action:
+#         description: 'Terraform action'
+#         required: true
+#         default: 'plan'
+#         type: choice
+#         options:
+#           - plan
+#           - apply
+#           - destroy
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -29,67 +43,65 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ github.event.inputs.action || 'plan/apply' }}
+    name: Terraform (DISABLED - See workflow file)
     runs-on: ubuntu-latest
-    environment: dev
-    defaults:
-      run:
-        working-directory: terraform
-
+    # Skip this job in hybrid mode
+    if: false
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Infrastructure Managed Locally
+        run: |
+          echo "Infrastructure is managed locally via Terraform Cloud."
+          echo "See .github/workflows/README.md for details."
+          exit 0
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-          terraform_wrapper: false
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        if: github.event.inputs.action != 'destroy'
-        run: terraform plan -out=tfplan -input=false
-        env:
-          TF_VAR_environment: dev
-
-      - name: Upload Plan
-        if: github.event.inputs.action != 'destroy'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: terraform/tfplan
-          retention-days: 5
-
-      - name: Terraform Apply (Auto on main)
-        if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'destroy' && github.event.inputs.action != 'plan'
-        run: terraform apply -auto-approve tfplan
-
-      - name: Terraform Apply (Manual)
-        if: github.event.inputs.action == 'apply' && github.ref != 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
-
-      - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve
-        env:
-          TF_VAR_environment: dev
-
-      - name: Output Results
-        if: github.event.inputs.action != 'destroy'
-        run: terraform output -json
+# Full workflow below - requires AWS secrets to be configured
+# 
+# jobs:
+#   terraform:
+#     name: Terraform ${{ github.event.inputs.action || 'plan/apply' }}
+#     runs-on: ubuntu-latest
+#     environment: dev
+#     defaults:
+#       run:
+#         working-directory: terraform
+#
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: "1.7.0"
+#           terraform_wrapper: false
+#
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-east-1
+#
+#       - name: Terraform Format Check
+#         run: terraform fmt -check -recursive
+#
+#       - name: Terraform Init
+#         run: terraform init
+#
+#       - name: Terraform Validate
+#         run: terraform validate
+#
+#       - name: Terraform Plan
+#         if: github.event.inputs.action != 'destroy'
+#         run: terraform plan -out=tfplan -input=false
+#         env:
+#           TF_VAR_environment: dev
+#
+#       - name: Terraform Apply (Auto on main)
+#         if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'destroy' && github.event.inputs.action != 'plan'
+#         run: terraform apply -auto-approve tfplan
+#
+#       - name: Output Results
+#         if: github.event.inputs.action != 'destroy'
+#         run: terraform output -json

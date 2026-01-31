@@ -1,4 +1,15 @@
 # CD Workflow - Deploy Application
+# 
+# ⚠️  REQUIRES AWS SECRETS: This workflow needs AWS_ACCESS_KEY_ID and 
+# AWS_SECRET_ACCESS_KEY to be set in GitHub repository secrets.
+#
+# To set up:
+#   gh secret set AWS_ACCESS_KEY_ID --body "<key>" --repo apitanga/ssr-nuxt-nitro-poc
+#   gh secret set AWS_SECRET_ACCESS_KEY --body "<secret>" --repo apitanga/ssr-nuxt-nitro-poc
+#   gh secret set AWS_ACCOUNT_ID --body "137064409667" --repo apitanga/ssr-nuxt-nitro-poc
+#
+# See .github/workflows/README.md for full details.
+
 name: CD - Deploy App
 
 on:

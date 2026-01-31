@@ -1,162 +1,163 @@
 # GitHub Actions Workflows
 
-## Workflows Overview
+## Deployment Strategy: Hybrid Mode
 
-### 1. CI (`ci.yml`)
-**Triggers**: Push/PR to main branch
+This project uses a **hybrid deployment strategy**:
+
+| Component | Managed By | Trigger |
+|-----------|-----------|---------|
+| **Infrastructure** | Local Terraform → Terraform Cloud | Manual (`terraform apply`) |
+| **Application Code** | GitHub Actions | Push to main (app/**) |
+
+### Why Hybrid?
+
+- **Infrastructure changes are rare** after initial setup
+- **App deployments are frequent** (code updates)
+- **Terraform Cloud** provides state management and locking
+- **GitHub Actions** excels at continuous deployment
+
+---
+
+## Workflows
+
+### 1. CI (`ci.yml`) ✅ Active
 **Purpose**: Validate code quality before merging
 
-| Job | Description |
-|-----|-------------|
-| `lint` | Type checking and dependency install |
-| `build` | Build Lambda package and upload artifact |
-| `terraform` | Validate Terraform configuration |
+| Trigger | Jobs |
+|---------|------|
+| Push/PR to main | `lint`, `build`, `terraform-validate` |
 
-### 2. CD - Deploy App (`cd-app.yml`)
-**Triggers**: Push to main (app changes) or manual dispatch
+### 2. CD - Deploy App (`cd-app.yml`) ✅ Active
 **Purpose**: Deploy application code to AWS Lambda
 
-Steps:
-1. Build Nuxt app with Lambda preset
-2. Upload to S3 (both regions)
-3. Update Lambda function code
-4. Smoke test health endpoint
+| Trigger | Action |
+|---------|--------|
+| Push to main (app/**) | Build & deploy to Lambda |
+| Manual dispatch | Deploy to specific environment |
 
-### 3. CD - Deploy Infrastructure (`cd-infra.yml`)
-**Triggers**: Push to main (terraform changes) or manual dispatch
+**Required Secrets**:
+- `AWS_ACCESS_KEY_ID` - CI/CD user access key
+- `AWS_SECRET_ACCESS_KEY` - CI/CD user secret key  
+- `AWS_ACCOUNT_ID` - AWS account ID
+
+**Note**: These must be set before app deployments work. See setup below.
+
+### 3. CD - Deploy Infrastructure (`cd-infra.yml`) ⏸️ Disabled
 **Purpose**: Manage AWS infrastructure with Terraform
 
-Actions:
-- `plan` - Preview changes (default)
-- `apply` - Deploy infrastructure
-- `destroy` - Remove all infrastructure (⚠️ destructive)
+**Status**: Disabled by default. Infrastructure managed locally via Terraform Cloud.
 
-### 4. PR Preview (`pr-preview.yml`)
-**Triggers**: PR opened/updated with app changes
-**Purpose**: Create preview deployment package for manual testing
+To enable:
+1. Set AWS secrets in GitHub
+2. Uncomment the `on:` section in the workflow file
+3. Remove the `if: false` condition
+
+### 4. PR Preview (`pr-preview.yml`) ⏸️ Requires Secrets
+**Purpose**: Create preview deployments for PRs
+
+**Status**: Requires AWS secrets to be configured first.
+
+---
 
 ## Required Secrets
 
-Configure these in GitHub repo settings (Settings → Secrets and variables → Actions):
+Configure these in GitHub: **Settings → Secrets and variables → Actions**
 
-| Secret | Description | How to get |
-|--------|-------------|------------|
-| `AWS_ACCESS_KEY_ID` | AWS IAM access key | IAM User → Security credentials |
-| `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key | IAM User → Security credentials |
-| `AWS_ACCOUNT_ID` | Your AWS account ID | `aws sts get-caller-identity` |
+| Secret | How to Get It |
+|--------|---------------|
+| `AWS_ACCESS_KEY_ID` | From Terraform output: `cicd_access_key_id` |
+| `AWS_SECRET_ACCESS_KEY` | From Secrets Manager (see below) |
+| `AWS_ACCOUNT_ID` | `137064409667` (pitanga account) |
 
-### Setting up Secrets
+### Setting Up Secrets
 
+1. **Retrieve CI/CD credentials** (from local Terraform deployment):
 ```bash
-# Using GitHub CLI
-gh secret set AWS_ACCESS_KEY_ID --body "your-access-key"
-gh secret set AWS_SECRET_ACCESS_KEY --body "your-secret-key"
-gh secret set AWS_ACCOUNT_ID --body "123456789012"
+aws secretsmanager get-secret-value \
+  --secret-id ssr-poc/cicd-credentials \
+  --query SecretString --output text | jq -r '
+  "AWS_ACCESS_KEY_ID: \(.AWS_ACCESS_KEY_ID)",
+  "AWS_SECRET_ACCESS_KEY: \(.AWS_SECRET_ACCESS_KEY)",
+  "AWS_ACCOUNT_ID: \(.AWS_ACCOUNT_ID)"
+  '
 ```
 
-## Environments
-
-GitHub Environments provide deployment protection rules:
-
-- **dev**: Auto-deploy on main branch merges
-- **prod**: Requires manual approval (recommended)
-
-## IAM Permissions Required
-
-The AWS credentials need these permissions:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "lambda:UpdateFunctionCode",
-        "lambda:GetFunction",
-        "lambda:GetFunctionUrlConfig",
-        "lambda:WaitForFunctionUpdated"
-      ],
-      "Resource": "arn:aws:lambda:*:*:function:ssr-poc-*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::ssr-poc-lambda-deployments-*/*",
-        "arn:aws:s3:::ssr-poc-preview-deployments/*"
-      ]
-    }
-  ]
-}
+2. **Set GitHub secrets**:
+```bash
+gh secret set AWS_ACCESS_KEY_ID --body "<key>" --repo apitanga/ssr-nuxt-nitro-poc
+gh secret set AWS_SECRET_ACCESS_KEY --body "<secret>" --repo apitanga/ssr-nuxt-nitro-poc
+gh secret set AWS_ACCOUNT_ID --body "137064409667" --repo apitanga/ssr-nuxt-nitro-poc
 ```
+
+Or via GitHub web UI: https://github.com/apitanga/ssr-nuxt-nitro-poc/settings/secrets/actions
+
+---
 
 ## Deployment Flow
 
+### App Deployment (GitHub Actions)
 ```
-Developer pushes to main
-        │
-        ▼
-┌───────────────┐
-│  CI Workflow  │ → Lint, Build, Validate
-└───────┬───────┘
-        │
-        ▼
-┌───────────────┐
-│  CD-Infra     │ → Deploy/update infrastructure
-└───────┬───────┘
-        │
-        ▼
-┌───────────────┐
-│  CD-App       │ → Build & deploy to Lambda
-└───────┬───────┘
-        │
-        ▼
-   Smoke Test
-        │
-        ▼
-   🚀 Live!
+Developer pushes code → GitHub Actions:
+  1. Checkout code
+  2. npm install
+  3. Build with NITRO_PRESET=aws-lambda
+  4. Create deployment package
+  5. Upload to S3 (both regions)
+  6. Update Lambda function code
+  7. Smoke test
 ```
 
-## Manual Deployments
-
-### Deploy Infrastructure Only
-
-```bash
-gh workflow run cd-infra.yml -f action=plan
-gh workflow run cd-infra.yml -f action=apply
+### Infrastructure Changes (Local)
+```
+Developer changes Terraform → Local:
+  1. cd terraform
+  2. terraform plan
+  3. terraform apply
+  4. Changes reflected in Terraform Cloud
 ```
 
-### Deploy App Only
+---
 
-```bash
-gh workflow run cd-app.yml -f environment=dev
-```
+## Current Infrastructure Status
+
+All infrastructure has been deployed:
+- ✅ Lambda functions (us-east-1, us-west-2)
+- ✅ DynamoDB Global Table
+- ✅ S3 buckets with replication
+- ✅ CloudFront distribution
+- ✅ CI/CD IAM user with credentials in Secrets Manager
+
+**CloudFront URL**: https://d2co4qzae21ivh.cloudfront.net
+
+---
+
+## Switching to Full GitHub Actions
+
+To enable infrastructure deployment via GitHub Actions:
+
+1. Set the AWS secrets (above)
+2. Edit `.github/workflows/cd-infra.yml`:
+   - Uncomment the `on:` trigger section
+   - Comment out `on: workflow_dispatch: {}`
+3. Commit and push
+
+Or use OIDC federation (more secure, no long-term keys):
+- See `terraform/iam-oidc.tf` for setup
+- Update workflows to use `role-to-assume` instead of access keys
+
+---
 
 ## Troubleshooting
 
-### Workflow fails on Lambda update
+### Workflow fails with "No credentials found"
+Secrets aren't set. Follow "Setting Up Secrets" above.
 
-Check that:
-1. S3 buckets exist (`ssr-poc-lambda-deployments-*`)
-2. Lambda functions exist (run terraform first)
-3. IAM permissions are correct
-
-### Terraform state lock
-
-If a previous run failed and left a lock:
-
+### Lambda update fails
+Check that `lambda-deploy.zip` exists in S3:
 ```bash
-aws dynamodb delete-item \
-  --table-name terraform-locks-ssr-poc \
-  --key '{"LockID": {"S": "terraform-state-ssr-poc/infrastructure/terraform.tfstate-md5-hash"}}'
+aws s3 ls s3://ssr-poc-lambda-deployments-137064409667-us-east-1/lambda/
 ```
 
-### Build fails
-
-Check Node.js version compatibility:
-- Nuxt 3 requires Node.js 18+
-- GitHub Actions uses Node.js 20
+### Terraform lock issues
+If a Terraform Cloud run is stuck, check:
+https://app.terraform.io/app/Pitangaville/workspaces/ssr-nuxt-nitro-poc/runs
