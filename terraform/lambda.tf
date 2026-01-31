@@ -43,7 +43,7 @@ locals {
   lambda_environment = {
     NODE_ENV        = "production"
     NITRO_PRESET    = "aws-lambda"
-    DYNAMODB_TABLE  = aws_dynamodb_global_table.visits.name
+    DYNAMODB_TABLE  = aws_dynamodb_table.visits_primary.name
     PRIMARY_REGION  = var.primary_region
     DR_REGION       = var.dr_region
   }
@@ -87,8 +87,8 @@ resource "aws_iam_policy" "lambda_dynamodb" {
           "dynamodb:Scan"
         ]
         Resource = [
-          aws_dynamodb_global_table.visits.arn,
-          "${aws_dynamodb_global_table.visits.arn}/*"
+          aws_dynamodb_table.visits_primary.arn,
+          "${aws_dynamodb_table.visits_primary.arn}/*"
         ]
       }
     ]
