@@ -1,10 +1,7 @@
 # DynamoDB Global Table for visit counter and session data
+# Using the modern aws_dynamodb_table_replica approach
 
-# Note: The service-linked role AWSServiceRoleForDynamoDBReplication is created automatically
-# by AWS when you first create a Global Table. If it doesn't exist, you may need to create
-# it manually via CLI: aws iam create-service-linked-role --aws-service-name replication.dynamodb.amazonaws.com
-
-# Primary region table
+# Primary region table (us-east-1)
 resource "aws_dynamodb_table" "visits_primary" {
   provider       = aws.primary
   name           = "${local.app_name}-visits"
@@ -22,26 +19,22 @@ resource "aws_dynamodb_table" "visits_primary" {
     type = "S"
   }
 
+  # Enable streams for replication (required for Global Tables)
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+
   tags = local.common_tags
 }
 
-# Global Table replication
-resource "aws_dynamodb_global_table" "visits" {
-  provider = aws.primary
-  name     = "${local.app_name}-visits"
+# DR region table replica (us-west-2)
+resource "aws_dynamodb_table_replica" "visits_dr" {
+  provider         = aws.dr
+  global_table_arn = aws_dynamodb_table.visits_primary.arn
 
-  replica {
-    region_name = var.primary_region
-  }
-
-  replica {
-    region_name = var.dr_region
-  }
-
-  depends_on = [aws_dynamodb_table.visits_primary]
+  tags = local.common_tags
 }
 
-# Initial counter item
+# Initial counter item (only in primary region)
 resource "aws_dynamodb_table_item" "counter" {
   provider   = aws.primary
   table_name = aws_dynamodb_table.visits_primary.name
@@ -53,4 +46,6 @@ resource "aws_dynamodb_table_item" "counter" {
     SK = { S = "COUNTER" }
     count = { N = "0" }
   })
+
+  depends_on = [aws_dynamodb_table.visits_primary]
 }

@@ -18,7 +18,7 @@ output "dr_lambda_function_name" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB Global Table name"
-  value       = aws_dynamodb_global_table.visits.name
+  value       = aws_dynamodb_table.visits_primary.name
 }
 
 output "application_url" {
