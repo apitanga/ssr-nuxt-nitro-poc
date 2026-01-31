@@ -4,7 +4,7 @@ resource "aws_cloudfront_distribution" "main" {
   provider = aws.primary
   enabled  = true
   comment  = "SSR Nuxt/Nitro PoC - Multi-region failover"
-  
+
   # Aliases for custom domain
   aliases = var.environment == "prod" ? [local.domains.primary] : []
 
@@ -29,7 +29,7 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = regex("https://([^/]+)/?", aws_lambda_function_url.primary.function_url)[0]
     origin_id   = "primary-lambda"
-    
+
     custom_origin_config {
       http_port              = 443
       https_port             = 443
@@ -47,7 +47,7 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = regex("https://([^/]+)/?", aws_lambda_function_url.dr.function_url)[0]
     origin_id   = "dr-lambda"
-    
+
     custom_origin_config {
       http_port              = 443
       https_port             = 443
@@ -65,7 +65,7 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = aws_s3_bucket.static_assets.bucket_regional_domain_name
     origin_id   = "static-assets"
-    
+
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.main.cloudfront_access_identity_path
     }
@@ -80,17 +80,17 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = true
       headers      = ["Origin", "Access-Control-Request-Headers", "Access-Control-Request-Method"]
-      
+
       cookies {
         forward = "all"
       }
     }
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl               = 0
-    default_ttl           = 0
-    max_ttl               = 0
-    compress              = true
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = true
   }
 
   # Static assets cache behavior
@@ -102,17 +102,17 @@ resource "aws_cloudfront_distribution" "main" {
 
     forwarded_values {
       query_string = false
-      
+
       cookies {
         forward = "none"
       }
     }
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl               = 86400
-    default_ttl           = 604800
-    max_ttl               = 31536000
-    compress              = true
+    min_ttl                = 86400
+    default_ttl            = 604800
+    max_ttl                = 31536000
+    compress               = true
   }
 
   # Favicon cache behavior
@@ -124,17 +124,17 @@ resource "aws_cloudfront_distribution" "main" {
 
     forwarded_values {
       query_string = false
-      
+
       cookies {
         forward = "none"
       }
     }
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl               = 86400
-    default_ttl           = 604800
-    max_ttl               = 31536000
-    compress              = true
+    min_ttl                = 86400
+    default_ttl            = 604800
+    max_ttl                = 31536000
+    compress               = true
   }
 
   # SSL Certificate

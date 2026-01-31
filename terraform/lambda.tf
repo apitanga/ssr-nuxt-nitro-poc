@@ -8,13 +8,13 @@ module "lambda_primary" {
     aws = aws.primary
   }
 
-  function_name     = "${local.app_name}-primary"
-  description       = "SSR Nuxt/Nitro app - Primary Region"
-  role_arn          = aws_iam_role.lambda_execution.arn
-  memory_size       = var.lambda_memory_size
-  timeout           = var.lambda_timeout
-  s3_bucket         = aws_s3_bucket.lambda_deployments_primary.id
-  s3_key            = "lambda/nitro-ssr.zip"
+  function_name         = "${local.app_name}-primary"
+  description           = "SSR Nuxt/Nitro app - Primary Region"
+  role_arn              = aws_iam_role.lambda_execution.arn
+  memory_size           = var.lambda_memory_size
+  timeout               = var.lambda_timeout
+  s3_bucket             = aws_s3_bucket.lambda_deployments_primary.id
+  s3_key                = "lambda/nitro-ssr.zip"
   environment_variables = local.lambda_environment
 
   tags = local.common_tags
@@ -28,13 +28,13 @@ module "lambda_dr" {
     aws = aws.dr
   }
 
-  function_name     = "${local.app_name}-dr"
-  description       = "SSR Nuxt/Nitro app - DR Region"
-  role_arn          = aws_iam_role.lambda_execution.arn
-  memory_size       = var.lambda_memory_size
-  timeout           = var.lambda_timeout
-  s3_bucket         = aws_s3_bucket.lambda_deployments_dr.id
-  s3_key            = "lambda/nitro-ssr.zip"
+  function_name         = "${local.app_name}-dr"
+  description           = "SSR Nuxt/Nitro app - DR Region"
+  role_arn              = aws_iam_role.lambda_execution.arn
+  memory_size           = var.lambda_memory_size
+  timeout               = var.lambda_timeout
+  s3_bucket             = aws_s3_bucket.lambda_deployments_dr.id
+  s3_key                = "lambda/nitro-ssr.zip"
   environment_variables = local.lambda_environment
 
   tags = local.common_tags
@@ -43,11 +43,11 @@ module "lambda_dr" {
 # Lambda environment variables (common to both regions)
 locals {
   lambda_environment = {
-    NODE_ENV        = "production"
-    NITRO_PRESET    = "aws-lambda"
-    DYNAMODB_TABLE  = aws_dynamodb_table.visits_primary.name
-    PRIMARY_REGION  = var.primary_region
-    DR_REGION       = var.dr_region
+    NODE_ENV       = "production"
+    NITRO_PRESET   = "aws-lambda"
+    DYNAMODB_TABLE = aws_dynamodb_table.visits_primary.name
+    PRIMARY_REGION = var.primary_region
+    DR_REGION      = var.dr_region
   }
 }
 
@@ -74,7 +74,7 @@ resource "aws_iam_role" "lambda_execution" {
 resource "aws_iam_policy" "lambda_dynamodb" {
   provider = aws.primary
   name     = "${local.app_name}-dynamodb-policy"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -121,17 +121,17 @@ resource "aws_lambda_function_url" "primary" {
     allow_origins     = ["*"]
     allow_methods     = ["*"]
     allow_headers     = ["*"]
-    max_age          = 86400
+    max_age           = 86400
   }
 }
 
 # Allow public invocation via Function URL - Primary
 resource "aws_lambda_permission" "allow_function_url_primary" {
-  provider      = aws.primary
-  statement_id  = "AllowFunctionURLInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.lambda_primary.function_name
-  principal     = "*"
+  provider               = aws.primary
+  statement_id           = "AllowFunctionURLInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.lambda_primary.function_name
+  principal              = "*"
   function_url_auth_type = "NONE"
 }
 
@@ -146,16 +146,16 @@ resource "aws_lambda_function_url" "dr" {
     allow_origins     = ["*"]
     allow_methods     = ["*"]
     allow_headers     = ["*"]
-    max_age          = 86400
+    max_age           = 86400
   }
 }
 
 # Allow public invocation via Function URL - DR
 resource "aws_lambda_permission" "allow_function_url_dr" {
-  provider      = aws.dr
-  statement_id  = "AllowFunctionURLInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = module.lambda_dr.function_name
-  principal     = "*"
+  provider               = aws.dr
+  statement_id           = "AllowFunctionURLInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.lambda_dr.function_name
+  principal              = "*"
   function_url_auth_type = "NONE"
 }

@@ -15,7 +15,7 @@ data "aws_route53_zone" "main" {
 resource "aws_route53_health_check" "primary" {
   count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
-  
+
   fqdn              = replace(aws_lambda_function_url.primary.function_url, "https://", "")
   port              = 443
   type              = "HTTPS"
@@ -34,7 +34,7 @@ resource "aws_route53_health_check" "primary" {
 resource "aws_route53_health_check" "dr" {
   count    = var.environment == "prod" ? 1 : 0
   provider = aws.primary
-  
+
   fqdn              = replace(aws_lambda_function_url.dr.function_url, "https://", "")
   port              = 443
   type              = "HTTPS"

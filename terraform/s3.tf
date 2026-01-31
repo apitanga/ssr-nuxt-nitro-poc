@@ -11,7 +11,7 @@ resource "aws_s3_bucket" "lambda_deployments_primary" {
 resource "aws_s3_bucket_versioning" "lambda_deployments_primary" {
   provider = aws.primary
   bucket   = aws_s3_bucket.lambda_deployments_primary.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -28,7 +28,7 @@ resource "aws_s3_bucket" "lambda_deployments_dr" {
 resource "aws_s3_bucket_versioning" "lambda_deployments_dr" {
   provider = aws.dr
   bucket   = aws_s3_bucket.lambda_deployments_dr.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -55,7 +55,7 @@ resource "aws_s3_bucket_public_access_block" "static_assets" {
 resource "aws_s3_bucket_versioning" "static_assets" {
   provider = aws.primary
   bucket   = aws_s3_bucket.static_assets.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -64,12 +64,12 @@ resource "aws_s3_bucket_versioning" "static_assets" {
 resource "aws_s3_bucket_policy" "static_assets" {
   provider = aws.primary
   bucket   = aws_s3_bucket.static_assets.id
-  policy   = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "CloudFrontAccess"
-        Effect    = "Allow"
+        Sid    = "CloudFrontAccess"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
@@ -101,7 +101,7 @@ resource "aws_s3_bucket_replication_configuration" "static_assets" {
       bucket = aws_s3_bucket.static_assets_dr.arn
     }
   }
-  
+
   depends_on = [
     aws_s3_bucket_versioning.static_assets,
     aws_s3_bucket_versioning.static_assets_dr
@@ -119,7 +119,7 @@ resource "aws_s3_bucket" "static_assets_dr" {
 resource "aws_s3_bucket_versioning" "static_assets_dr" {
   provider = aws.dr
   bucket   = aws_s3_bucket.static_assets_dr.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }

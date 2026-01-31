@@ -15,9 +15,9 @@ resource "aws_iam_user" "cicd" {
 
 # CI/CD IAM Policy - Least privilege for deployment tasks
 resource "aws_iam_policy" "cicd" {
-  provider = aws.primary
-  name     = "${local.app_name}-cicd-policy"
-  path     = "/ci-cd/"
+  provider    = aws.primary
+  name        = "${local.app_name}-cicd-policy"
+  path        = "/ci-cd/"
   description = "Least-privilege policy for ${local.app_name} CI/CD deployments"
 
   policy = jsonencode({

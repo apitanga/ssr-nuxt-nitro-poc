@@ -7,16 +7,16 @@ terraform {
 
   cloud {
     organization = "Pitangaville"
-    
+
     workspaces {
       name = "ssr-nuxt-nitro-poc"
     }
   }
-  
+
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+      source                = "hashicorp/aws"
+      version               = "~> 5.0"
       configuration_aliases = [aws.primary, aws.dr]
     }
   }
@@ -26,7 +26,7 @@ terraform {
 provider "aws" {
   alias  = "primary"
   region = var.primary_region
-  
+
   default_tags {
     tags = local.common_tags
   }
@@ -36,7 +36,7 @@ provider "aws" {
 provider "aws" {
   alias  = "dr"
   region = var.dr_region
-  
+
   default_tags {
     tags = local.common_tags
   }
@@ -50,7 +50,7 @@ locals {
     ManagedBy   = "terraform"
     Owner       = "andre.pitanga@fiserv.com"
   }
-  
+
   app_name = "ssr-poc"
   domains = {
     primary = "${var.subdomain}.${var.domain_name}"

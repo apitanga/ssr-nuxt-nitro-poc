@@ -3,11 +3,11 @@
 
 # Primary region table (us-east-1)
 resource "aws_dynamodb_table" "visits_primary" {
-  provider       = aws.primary
-  name           = "${local.app_name}-visits"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "PK"
-  range_key      = "SK"
+  provider     = aws.primary
+  name         = "${local.app_name}-visits"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
 
   attribute {
     name = "PK"
@@ -47,8 +47,8 @@ resource "aws_dynamodb_table_item" "counter" {
   range_key  = "SK"
 
   item = jsonencode({
-    PK = { S = "GLOBAL" }
-    SK = { S = "COUNTER" }
+    PK    = { S = "GLOBAL" }
+    SK    = { S = "COUNTER" }
     count = { N = "0" }
   })
 
