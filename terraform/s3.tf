@@ -68,18 +68,13 @@ resource "aws_s3_bucket_policy" "static_assets" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "CloudFrontAccess"
+        Sid    = "CloudFrontOAIAccess"
         Effect = "Allow"
         Principal = {
-          Service = "cloudfront.amazonaws.com"
+          CanonicalUser = aws_cloudfront_origin_access_identity.main.s3_canonical_user_id
         }
         Action   = "s3:GetObject"
         Resource = "${aws_s3_bucket.static_assets.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.main.arn
-          }
-        }
       }
     ]
   })
