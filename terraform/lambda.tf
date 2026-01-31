@@ -3,38 +3,40 @@
 # Primary Region Lambda
 module "lambda_primary" {
   source = "./modules/lambda"
-  
+
   providers = {
     aws = aws.primary
   }
 
   function_name     = "${local.app_name}-primary"
   description       = "SSR Nuxt/Nitro app - Primary Region"
+  role_arn          = aws_iam_role.lambda_execution.arn
   memory_size       = var.lambda_memory_size
   timeout           = var.lambda_timeout
   s3_bucket         = aws_s3_bucket.lambda_deployments_primary.id
   s3_key            = "lambda/nitro-ssr.zip"
   environment_variables = local.lambda_environment
-  
+
   tags = local.common_tags
 }
 
 # DR Region Lambda
 module "lambda_dr" {
   source = "./modules/lambda"
-  
+
   providers = {
     aws = aws.dr
   }
 
   function_name     = "${local.app_name}-dr"
   description       = "SSR Nuxt/Nitro app - DR Region"
+  role_arn          = aws_iam_role.lambda_execution.arn
   memory_size       = var.lambda_memory_size
   timeout           = var.lambda_timeout
   s3_bucket         = aws_s3_bucket.lambda_deployments_dr.id
   s3_key            = "lambda/nitro-ssr.zip"
   environment_variables = local.lambda_environment
-  
+
   tags = local.common_tags
 }
 
@@ -123,6 +125,16 @@ resource "aws_lambda_function_url" "primary" {
   }
 }
 
+# Allow public invocation via Function URL - Primary
+resource "aws_lambda_permission" "allow_function_url_primary" {
+  provider      = aws.primary
+  statement_id  = "AllowFunctionURLInvoke"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.lambda_primary.function_name
+  principal     = "*"
+  function_url_auth_type = "NONE"
+}
+
 # Lambda Function URL for DR region
 resource "aws_lambda_function_url" "dr" {
   provider           = aws.dr
@@ -136,4 +148,14 @@ resource "aws_lambda_function_url" "dr" {
     allow_headers     = ["*"]
     max_age          = 86400
   }
+}
+
+# Allow public invocation via Function URL - DR
+resource "aws_lambda_permission" "allow_function_url_dr" {
+  provider      = aws.dr
+  statement_id  = "AllowFunctionURLInvoke"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.lambda_dr.function_name
+  principal     = "*"
+  function_url_auth_type = "NONE"
 }
