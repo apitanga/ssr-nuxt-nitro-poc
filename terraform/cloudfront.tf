@@ -13,7 +13,7 @@ resource "aws_cloudfront_distribution" "main" {
     origin_id = "origin-group-primary-dr"
 
     failover_criteria {
-      status_codes = [500, 502, 503, 504, 5000]
+      status_codes = [500, 502, 503, 504]
     }
 
     member {
