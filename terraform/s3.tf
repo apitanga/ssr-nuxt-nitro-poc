@@ -52,6 +52,15 @@ resource "aws_s3_bucket_public_access_block" "static_assets" {
   restrict_public_buckets = false
 }
 
+resource "aws_s3_bucket_versioning" "static_assets" {
+  provider = aws.primary
+  bucket   = aws_s3_bucket.static_assets.id
+  
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_policy" "static_assets" {
   provider = aws.primary
   bucket   = aws_s3_bucket.static_assets.id
