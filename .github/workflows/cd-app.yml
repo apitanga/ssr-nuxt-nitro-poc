@@ -66,7 +66,26 @@ jobs:
           cd ../..
           ls -lh lambda-deploy.zip
 
+      - name: Check for AWS credentials
+        id: check-secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "⚠️  AWS secrets not configured. Skipping deployment."
+            echo ""
+            echo "To enable deployment, set these GitHub secrets:"
+            echo "  - AWS_ACCESS_KEY_ID"
+            echo "  - AWS_SECRET_ACCESS_KEY"
+            echo "  - AWS_ACCOUNT_ID"
+            echo ""
+            echo "See .github/workflows/README.md for setup instructions."
+          else
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            echo "✅ AWS secrets found. Proceeding with deployment."
+          fi
+
       - name: Configure AWS credentials
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -74,12 +93,14 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload to S3 (Primary - us-east-1)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         working-directory: app
         run: |
           aws s3 cp lambda-deploy.zip \
             s3://ssr-poc-lambda-deployments-${{ secrets.AWS_ACCOUNT_ID }}-us-east-1/lambda/nitro-ssr.zip
 
       - name: Upload to S3 (DR - us-west-2)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         working-directory: app
         run: |
           aws s3 cp lambda-deploy.zip \
@@ -87,6 +108,7 @@ jobs:
             --region us-west-2
 
       - name: Update Lambda function (Primary)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           aws lambda update-function-code \
             --function-name ssr-poc-primary \
@@ -95,6 +117,7 @@ jobs:
             --publish
 
       - name: Update Lambda function (DR)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           aws lambda update-function-code \
             --function-name ssr-poc-dr \
@@ -104,17 +127,20 @@ jobs:
             --publish
 
       - name: Wait for update (Primary)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           aws lambda wait function-updated-v2 \
             --function-name ssr-poc-primary
 
       - name: Wait for update (DR)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           aws lambda wait function-updated-v2 \
             --function-name ssr-poc-dr \
             --region us-west-2
 
       - name: Smoke test
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           echo "Waiting for propagation..."
           sleep 10
@@ -125,7 +151,13 @@ jobs:
           curl -sf "$PRIMARY_URL/api/health" || exit 1
           echo "✅ Deployment successful!"
 
-      - name: Notify
-        if: always()
+      - name: Notify (with secrets)
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: |
           echo "::notice::Deployment to ${{ github.event.inputs.environment || 'dev' }} completed!"
+
+      - name: Notify (missing secrets)
+        if: steps.check-secrets.outputs.has_secrets == 'false'
+        run: |
+          echo "::warning::Build succeeded but deployment skipped - AWS secrets not configured"
+          echo "::warning::See .github/workflows/README.md for setup instructions"
