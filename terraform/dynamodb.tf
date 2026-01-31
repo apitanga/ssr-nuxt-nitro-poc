@@ -24,6 +24,11 @@ resource "aws_dynamodb_table" "visits_primary" {
   stream_view_type = "NEW_AND_OLD_IMAGES"
 
   tags = local.common_tags
+
+  # Ignore replica changes - managed by aws_dynamodb_table_replica resource
+  lifecycle {
+    ignore_changes = [replica]
+  }
 }
 
 # DR region table replica (us-west-2)
