@@ -12,7 +12,10 @@
 name: CD - Deploy Infrastructure
 
 # Disabled - managed locally via Terraform Cloud
-on: workflow_dispatch: {}
+on:
+  # workflow_dispatch: {}  # Uncomment to enable manual runs
+  push:
+    branches: [never-trigger-this-branch]  # Dummy branch to disable
 
 # Uncomment below to enable GitHub Actions for infrastructure
 # on:
