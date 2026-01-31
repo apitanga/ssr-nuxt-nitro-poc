@@ -141,17 +141,23 @@ const failoverResult = ref('')
 
 const testFailover = async () => {
   loading.value = true
-  failoverResult.value = ''
+  failoverResult.value = 'Testing...'
   
   try {
-    // Make multiple requests to test routing
+    // Make request to test routing
     const start = performance.now()
-    const response = await $fetch('/api/health')
+    const response = await fetch('/api/health')
     const duration = Math.round(performance.now() - start)
     
-    failoverResult.value = `Health check passed! Served by ${response.region} in ${duration}ms`
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    failoverResult.value = `✅ Health check passed! Served by ${data.region} in ${duration}ms`
   } catch (error) {
-    failoverResult.value = `Error: ${error.message}`
+    console.error('Failover test error:', error)
+    failoverResult.value = `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`
   } finally {
     loading.value = false
   }

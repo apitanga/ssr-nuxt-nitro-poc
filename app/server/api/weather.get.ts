@@ -88,21 +88,36 @@ const getWeatherDescription = (code: number): string => {
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get client IP
+    // Get client IP - handle CloudFront/Lambda proxy chain
     const headers = getRequestHeaders(event)
     const forwarded = headers['x-forwarded-for']
     const realIP = headers['x-real-ip']
-    const clientIP = forwarded?.split(',')[0] || realIP || '127.0.0.1'
+    
+    // CloudFront sends: client, proxy1, proxy2, ...
+    // We want the first non-private IP
+    let clientIP = '127.0.0.1'
+    if (forwarded) {
+      // Take the FIRST IP in the chain (the actual client)
+      const ips = forwarded.split(',').map(ip => ip.trim())
+      clientIP = ips[0] || '127.0.0.1'
+    } else if (realIP) {
+      clientIP = realIP
+    }
+    
+    console.log('Weather API - IP detection:', { forwarded, realIP, clientIP })
     
     // Get location
-    const location = await getLocationFromIP(clientIP)
+    let location = await getLocationFromIP(clientIP)
+    
+    // Fallback to default if geolocation fails
     if (!location) {
-      return {
-        error: 'Could not determine location',
-        location: 'Unknown',
-        temperature: null,
-        unit: 'F',
-        description: 'Location unavailable'
+      console.log('Geolocation failed for IP:', clientIP, '- using default location')
+      location = {
+        city: 'New York',
+        region: 'NY',
+        country: 'US',
+        latitude: 40.7128,
+        longitude: -74.0060
       }
     }
     
