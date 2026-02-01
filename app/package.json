@@ -2,6 +2,9 @@
   "name": "ssr-nuxt-nitro-poc",
   "private": true,
   "type": "module",
+  "overrides": {
+    "fast-xml-parser": "^5.3.4"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
